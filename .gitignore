@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+
+# Playwright
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Test artifacts
+test_data/downloads/*    # Ignore downloads but keep uploads
+!test_data/downloads/.gitkeep  # Keep the empty downloads directory
+
+# Screenshots
+screenshots/*
+!screenshots/.gitkeep
+
+# Log files
+*.log
+logs/

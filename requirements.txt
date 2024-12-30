@@ -1,0 +1,13 @@
+# Core dependencies
+playwright==1.42.0
+behave==1.2.6
+pytest==7.4.3  
+pytest-playwright==0.4.0
+python-dotenv==1.0.1
+
+# Report generation
+allure-behave==2.13.2
+behave-html-formatter==0.9.10
+
+# Utility packages
+typing-extensions==4.9.0
