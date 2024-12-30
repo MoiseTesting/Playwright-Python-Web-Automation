@@ -7,7 +7,7 @@ Feature: Advanced UI Features
         Given I navigate to the automation playground
         When I click on Advanced UI Features section
 
-    @challenge
+    @challenge @p1
     Scenario: Successfully Complete Book Rating Challenge
         Then I should see "Challenge 1" as the title
         And I should see book rating instructions
@@ -23,7 +23,7 @@ Feature: Advanced UI Features
         And I click Check Rating button
         Then I should see "Try Again!" message
 
-    @challenge @validation
+    @challenge @validation @flaky
 Scenario Outline: Verify Different Star Ratings
     When I get the star rating for "Sapiens: A Brief History of the Humankind"
     And I enter the star rating "<rating>"

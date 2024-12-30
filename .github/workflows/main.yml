@@ -1,0 +1,145 @@
+# .github/workflows/main.yml
+
+name: Playwright Test Automation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  # Job for P1 and Smoke Tests
+  critical_tests:
+    name: Critical Path Tests (P1 & Smoke)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9]
+        browser: [chromium, firefox]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-xdist  # For parallel execution
+
+    - name: Install Playwright Browsers
+      run: |
+        playwright install ${{ matrix.browser }}
+        playwright install-deps ${{ matrix.browser }}
+
+    - name: Create directories
+      run: |
+        mkdir -p logs/critical
+        mkdir -p reports/critical
+        mkdir -p screenshots/critical
+
+    - name: Run Critical Tests
+      env:
+        BROWSER: ${{ matrix.browser }}
+        ENV: prod
+      run: |
+        behave --tags="@p1 or @smoke" --format=progress2 --format=json.pretty -o reports/critical/results.json --junit --junit-directory reports/critical
+
+  # Job for Other Priority Tests (P2-P4)
+  priority_tests:
+    name: Priority Tests (P2-P4)
+    needs: critical_tests  # Only run if critical tests pass
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+        browser: [chromium]
+        priority: [p2, p3, p4]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-xdist
+
+    - name: Install Playwright Browser
+      run: |
+        playwright install ${{ matrix.browser }}
+        playwright install-deps ${{ matrix.browser }}
+
+    - name: Create directories
+      run: |
+        mkdir -p logs/${{ matrix.priority }}
+        mkdir -p reports/${{ matrix.priority }}
+        mkdir -p screenshots/${{ matrix.priority }}
+
+    - name: Run Priority Tests
+      env:
+        BROWSER: ${{ matrix.browser }}
+        ENV: prod
+      run: |
+        # Run tests with retries for flaky tests
+        behave --tags="@${{ matrix.priority }}" --format=progress2 --format=json.pretty -o reports/${{ matrix.priority }}/results.json --junit --junit-directory reports/${{ matrix.priority }} --retries 2
+
+  # Job for Test Result Aggregation
+  aggregate_results:
+    name: Aggregate Test Results
+    needs: [critical_tests, priority_tests]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: all-artifacts
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install reporting dependencies
+      run: |
+        pip install junit2html
+        pip install behave2html
+
+    # Aggregate and generate combined report
+    - name: Generate Combined Report
+      run: |
+        python .github/scripts/combine_reports.py
+
+    - name: Upload Combined Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: combined-test-report
+        path: reports/combined_report.html
+
+    # Deploy to GitHub Pages
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./reports
+        keep_files: true

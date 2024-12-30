@@ -16,7 +16,7 @@ Feature: Pizza Order Functionality
         And I should see "Dinesh's Pizza House" in the page
         And I should see pizza customization options
 
-    @regression @happy-path
+    @regression @happy-path @p1
     Scenario: Successfully Add Pizza to Cart
         When I select "Small" pizza size
         And I select "Pepperoni" from pizza flavor dropdown

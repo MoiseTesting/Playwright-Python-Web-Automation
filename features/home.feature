@@ -3,7 +3,7 @@ Feature: Home Page Functionality
     I want to access the automation playground home page
     So that I can interact with various automation elements
 
-    @smoke
+    @smoke @p1
     Scenario: Successfully load the home page
         Given I navigate to the automation playground
         Then I should see the page title "The Playground"

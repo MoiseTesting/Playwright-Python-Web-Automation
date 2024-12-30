@@ -7,7 +7,7 @@ Feature: Form Interactions
         Given I navigate to the automation playground
         When I click on Forms section
 
-    @forms @basic
+    @forms @basic @p1
     Scenario: Fill Basic Form Controls
         When I enter "5" years of automation experience
         And I select the following programming languages
@@ -44,7 +44,7 @@ Feature: Form Interactions
         And I should see "provide a valid zip" validation for zip
         And I should see "must agree before submitting" validation for terms
 
-    @forms @validation @happy-path
+    @forms @validation @happy-path @p1
     Scenario: Successfully Submit Form
         When I enter "New York" as city
         And I enter "NY" as state
@@ -63,7 +63,7 @@ Feature: Form Interactions
             | index.html    |
         Then I should see " sample_text.txt index.html" as the uploaded files
 
-    @forms @file-handling
+    @forms @file-handling @p1
 Scenario: Handle File Upload and Download
     Given I navigate to the automation playground
     When I click on Forms section

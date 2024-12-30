@@ -7,7 +7,7 @@ Feature: Sample Pages Login and Registration
         Given I navigate to the automation playground
         When I click on the Sample Pages section
         
-    @smoke
+    @smoke @p1
     Scenario: Navigate to Login Page via Sample Pages
         Then I should see "Log in" page title
         And I should see "Already a user? Please login." text
@@ -19,7 +19,7 @@ Feature: Sample Pages Login and Registration
         When I click on "New user? Register!" link
         Then I should be on the registration page
     
-    @regression @registration
+    @regression @registration @p1
     Scenario: Successfully Register New User
         When I click on "New user? Register!" link
         Then I should see "Register" page title

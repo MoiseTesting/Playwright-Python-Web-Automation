@@ -112,6 +112,18 @@ venv\Scripts\activate     # For Windows
 pip install -r requirements.txt
 playwright install chromium
 ```
+## Test Tags Organization
+Our tests are organized using the following tags:
+
+**Priority Tags:**
+- @p1: Critical path tests
+- @p2: High priority tests
+- @p3: Medium priority tests
+- @p4: Low priority tests
+**Special Tags:**
+- @smoke: Quick tests verifying core functionality
+- @slow: Long-running tests
+- @flaky: Tests that may need retries
 
 ## Running Tests
 Run all tests:
@@ -148,6 +160,12 @@ The project includes GitHub Actions workflows for:
 - Running tests on push/pull request
 - Generating and publishing test reports
 - Cross-browser testing
+- Runs tests on multiple Python versions (3.8, 3.9)
+- Executes tests in parallel
+- Implements automatic retries for flaky tests
+
+## Viewing Test Reports 
+1. After test execution, reports are available in the GitHub Actions artifacts
 
 ## Contributing
 1. Fork the repository
