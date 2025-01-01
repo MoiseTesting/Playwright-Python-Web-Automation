@@ -9,10 +9,9 @@ def combine_json_reports():
     """
     Combines all JSON reports from different test runs into a single report
     """
-    current_time = datetime.now().isoformat()
     combined_data = {
-        "start_time": None,
-        "end_time": None,
+        "start_time": datetime.now().isoformat(),
+        "end_time": datetime.now().isoformat(),
         "total_scenarios": 0,
         "passed_scenarios": 0,
         "failed_scenarios": 0,
@@ -21,48 +20,68 @@ def combine_json_reports():
     }
 
     # Find all JSON result files
-    json_files = glob.glob('reports/**/results.json', recursive=True)
+    json_files = glob.glob('reports/*results.json')
     
     for json_file in json_files:
-        with open(json_file, 'r') as f:
-            try:
-                content = f.read()
-                if not content.strip():
+        try:
+            with open(json_file, 'r') as f:
+                content = f.read().strip()
+                if not content:
                     print(f"Empty file: {json_file}")
                     continue
-                data = json.load(f)
+                    
+                data = json.loads(content)
                 
-                # Update timing information
-                if not combined_data["start_time"] or data["start_time"] < combined_data["start_time"]:
-                    combined_data["start_time"] = data["start_time"]
-                if not combined_data["end_time"] or data["end_time"] > combined_data["end_time"]:
-                    combined_data["end_time"] = data["end_time"]
+                # Handle different JSON structures
+                if isinstance(data, dict):
+                    # Extract timing information if available
+                    if 'start_time' in data and isinstance(data['start_time'], str):
+                        try:
+                            start_time = datetime.fromisoformat(data['start_time'])
+                            if not combined_data["start_time"] or start_time.isoformat() < combined_data["start_time"]:
+                                combined_data["start_time"] = start_time.isoformat()
+                        except (ValueError, TypeError) as e:
+                            print(f"Error parsing start_time in {json_file}: {e}")
+
+                    if 'end_time' in data and isinstance(data['end_time'], str):
+                        try:
+                            end_time = datetime.fromisoformat(data['end_time'])
+                            if not combined_data["end_time"] or end_time.isoformat() > combined_data["end_time"]:
+                                combined_data["end_time"] = end_time.isoformat()
+                        except (ValueError, TypeError) as e:
+                            print(f"Error parsing end_time in {json_file}: {e}")
+
+                    # Process test results
+                    features = data.get('features', [])
+                    if isinstance(features, list):
+                        for feature in features:
+                            if isinstance(feature, dict):
+                                scenarios = feature.get('scenarios', [])
+                                if isinstance(scenarios, list):
+                                    for scenario in scenarios:
+                                        if isinstance(scenario, dict):
+                                            combined_data["total_scenarios"] += 1
+                                            status = scenario.get('status', 'unknown')
+                                            
+                                            if status == "passed":
+                                                combined_data["passed_scenarios"] += 1
+                                            elif status == "failed":
+                                                combined_data["failed_scenarios"] += 1
+                                            else:
+                                                combined_data["skipped_scenarios"] += 1
+                                            
+                                            result = {
+                                                "feature": feature.get('name', 'Unknown Feature'),
+                                                "scenario": scenario.get('name', 'Unknown Scenario'),
+                                                "status": status,
+                                                "tags": scenario.get('tags', []),
+                                                "duration": scenario.get('duration', 0)
+                                            }
+                                            combined_data["test_results"].append(result)
                 
-                # Add test results
-                for feature in data.get("features", []):
-                    for scenario in feature.get("scenarios", []):
-                        combined_data["total_scenarios"] += 1
-                        
-                        if scenario["status"] == "passed":
-                            combined_data["passed_scenarios"] += 1
-                        elif scenario["status"] == "failed":
-                            combined_data["failed_scenarios"] += 1
-                        else:
-                            combined_data["skipped_scenarios"] += 1
-                        
-                        # Add detailed test result
-                        result = {
-                            "feature": feature["name"],
-                            "scenario": scenario["name"],
-                            "status": scenario["status"],
-                            "tags": scenario.get("tags", []),
-                            "duration": scenario.get("duration", 0)
-                        }
-                        combined_data["test_results"].append(result)
-                        
-            except json.JSONDecodeError:
-                print(f"Error decoding JSON from {json_file}")
-                continue
+        except Exception as e:
+            print(f"Error processing file {json_file}: {e}")
+            continue
 
     return combined_data
 
@@ -81,10 +100,13 @@ def generate_html_report(data):
             .passed { color: green; }
             .failed { color: red; }
             .skipped { color: orange; }
-            table { width: 100%; border-collapse: collapse; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; }
             tr:nth-child(even) { background-color: #f9f9f9; }
+            .status-passed { background-color: #dff0d8; }
+            .status-failed { background-color: #f2dede; }
+            .status-skipped { background-color: #fcf8e3; }
         </style>
     </head>
     <body>
@@ -95,8 +117,7 @@ def generate_html_report(data):
             <p class="passed">Passed: {passed}</p>
             <p class="failed">Failed: {failed}</p>
             <p class="skipped">Skipped: {skipped}</p>
-            <p>Duration: {duration:.2f} seconds</p>
-            <p>Generated: {timestamp}</p>
+            <p>Report Generated: {timestamp}</p>
         </div>
         
         <h2>Test Results</h2>
@@ -117,20 +138,16 @@ def generate_html_report(data):
     # Generate test result rows
     test_rows = ""
     for result in data["test_results"]:
-        status_class = result["status"].lower()
+        status_class = f"status-{result['status'].lower()}"
         test_rows += f"""
-            <tr>
+            <tr class="{status_class}">
                 <td>{result["feature"]}</td>
                 <td>{result["scenario"]}</td>
-                <td class="{status_class}">{result["status"]}</td>
+                <td>{result["status"]}</td>
                 <td>{', '.join(result["tags"])}</td>
                 <td>{result["duration"]:.2f}</td>
             </tr>
         """
-    
-    # Calculate total duration
-    duration = (datetime.fromisoformat(data["end_time"]) - 
-               datetime.fromisoformat(data["start_time"])).total_seconds()
     
     # Generate the complete HTML report
     html_content = html_template.format(
@@ -138,7 +155,6 @@ def generate_html_report(data):
         passed=data["passed_scenarios"],
         failed=data["failed_scenarios"],
         skipped=data["skipped_scenarios"],
-        duration=duration,
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         test_rows=test_rows
     )
@@ -156,7 +172,7 @@ def main():
     html_content = generate_html_report(combined_data)
     
     # Write the combined report
-    with open('reports/combined_report.html', 'w') as f:
+    with open('reports/combined_report.html', 'w', encoding='utf-8') as f:
         f.write(html_content)
     
     print("Combined report generated successfully!")

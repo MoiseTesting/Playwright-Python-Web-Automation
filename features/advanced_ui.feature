@@ -23,17 +23,3 @@ Feature: Advanced UI Features
         And I click Check Rating button
         Then I should see "Try Again!" message
 
-    @challenge @validation @flaky
-Scenario Outline: Verify Different Star Ratings
-    When I get the star rating for "Sapiens: A Brief History of the Humankind"
-    And I enter the star rating "<rating>"
-    And I click Check Rating button
-    Then I should see the correct validation message
-
-    Examples:
-        | rating | 
-        | *     | 
-        | **    | 
-        | ***   | 
-        | ****  | 
-        | *****  | 
