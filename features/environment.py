@@ -1,4 +1,3 @@
-
 import os
 import json
 from datetime import datetime
@@ -16,12 +15,12 @@ def before_all(context):
     if not os.path.exists(downloads_dir):
         os.makedirs(downloads_dir)
 
-     # Create screenshots directory if it doesn't exist
+    # Create screenshots directory if it doesn't exist
     screenshots_dir = os.path.join(os.getcwd(), 'screenshots')
     if not os.path.exists(screenshots_dir):
         os.makedirs(screenshots_dir)
 
-     # Store screenshots path in context
+    # Store screenshots path in context
     context.screenshots_dir = screenshots_dir
     
     # Store downloads path in context for use in tests
@@ -39,6 +38,27 @@ def before_all(context):
         logger.error(f"Failed to load config file {config_path}: {str(e)}")
         raise
 
+def determine_headless_mode(context):
+    """
+    Determines whether to run in headless mode based on environment and configuration
+    Priority:
+    1. CI environment variable (always headless if CI=true)
+    2. HEADED environment variable (if set)
+    3. Config file setting
+    4. Default to headed for local development
+    """
+    # Check if running in CI environment
+    if os.getenv('CI'):
+        return True
+    
+    # Check for HEADED environment variable
+    headed_env = os.getenv('HEADED')
+    if headed_env is not None:
+        return headed_env.lower() != 'true'
+    
+    # Use config file setting or default to headed for local development
+    return context.config.get('headless', False)
+
 def before_scenario(context, scenario):
     """
     Runs before each scenario
@@ -46,10 +66,21 @@ def before_scenario(context, scenario):
     try:
         context.playwright = sync_playwright().start()
         
-        # Launch browser
-        context.browser = context.playwright.chromium.launch(
-            headless=context.config.get('headless', False)
-        )
+        # Get browser type from environment variable or default to chromium
+        browser_name = os.getenv('BROWSER', 'chromium')
+        
+        # Determine headless mode
+        headless = determine_headless_mode(context)
+        
+        # Launch browser based on browser type
+        if browser_name == 'chromium':
+            context.browser = context.playwright.chromium.launch(headless=headless)
+        elif browser_name == 'firefox':
+            context.browser = context.playwright.firefox.launch(headless=headless)
+        elif browser_name == 'webkit':
+            context.browser = context.playwright.webkit.launch(headless=headless)
+        else:
+            raise ValueError(f"Unsupported browser: {browser_name}")
         
         # Create new browser context with downloads enabled
         context.browser_context = context.browser.new_context(
@@ -60,7 +91,7 @@ def before_scenario(context, scenario):
         # Create new page
         context.page = context.browser_context.new_page()
         
-        logger.info("Browser and page initialized successfully")
+        logger.info(f"Browser {browser_name} initialized successfully in {'headless' if headless else 'headed'} mode")
     except Exception as e:
         logger.error(f"Failed to initialize browser: {str(e)}")
         raise

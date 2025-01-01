@@ -9,6 +9,7 @@ def combine_json_reports():
     """
     Combines all JSON reports from different test runs into a single report
     """
+    current_time = datetime.now().isoformat()
     combined_data = {
         "start_time": None,
         "end_time": None,
@@ -25,6 +26,10 @@ def combine_json_reports():
     for json_file in json_files:
         with open(json_file, 'r') as f:
             try:
+                content = f.read()
+                if not content.strip():
+                    print(f"Empty file: {json_file}")
+                    continue
                 data = json.load(f)
                 
                 # Update timing information

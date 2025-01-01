@@ -33,62 +33,63 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest-xdist behave-html-formatter
-        
-        # Verify installations
-        python --version
-        pip --version
-        behave --version
-        playwright --version
 
-    - name: Install Playwright Browsers
+    - name: Install Playwright
       run: |
-        playwright install ${{ matrix.browser }}
-        playwright install-deps ${{ matrix.browser }}
-
+        playwright install --with-deps ${{ matrix.browser }}
+        
     - name: Create directories
       run: |
         mkdir -p logs
         mkdir -p reports
         mkdir -p screenshots
 
-    - name: List Feature Files
-      run: |
-        echo "Available feature files:"
-        ls -R features/*.feature
-        
-        echo "Available tags:"
-        behave --tags-help
-
     - name: Run Smoke Tests
       env:
         BROWSER: ${{ matrix.browser }}
-        ENVIRONMENT: dev  # Match your local environment
+        ENVIRONMENT: dev
+        PWTEST_HEADED: "0"  # Force headless mode
+        DISPLAY: ":99.0"
       run: |
+        # Start virtual display
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 3
+        
+        # Run tests with proper headless configuration
         behave --tags="@smoke" -v --format=progress2 --format=json.pretty -o reports/smoke_results.json
-
+      
     - name: Run P1 Tests
-      if: success() || failure()  # Run even if smoke tests fail
+      if: success() || failure()
       env:
         BROWSER: ${{ matrix.browser }}
         ENVIRONMENT: dev
+        PWTEST_HEADED: "0"
+        DISPLAY: ":99.0"
       run: |
-        behave --tags="@p1" --format=progress2 --format=json.pretty -o reports/p1_results.json
+        behave --tags="@p1" -v --format=progress2 --format=json.pretty -o reports/p1_results.json
 
     - name: Run Remaining Tests
-      if: success() || failure()  # Run even if previous tests fail
+      if: success() || failure()
       env:
         BROWSER: ${{ matrix.browser }}
         ENVIRONMENT: dev
+        PWTEST_HEADED: "0"
+        DISPLAY: ":99.0"
       run: |
-        behave --tags="~@smoke and ~@p1" --format=progress2 --format=json.pretty -o reports/other_results.json
+        behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json.pretty -o reports/other_results.json
 
     - name: Generate Combined Report
       if: always()
       run: |
-        # Install additional reporting tools if needed
+        # Install additional reporting tools
         pip install junit2html
         
-        # Combine reports
+        # Create empty result files if they don't exist
+        touch reports/smoke_results.json
+        touch reports/p1_results.json
+        touch reports/other_results.json
+        
+        # Run report generation
         python .github/scripts/combine_reports.py
 
     - name: Upload Test Results
@@ -96,17 +97,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: |
-          reports/
-          logs/
-          screenshots/
-
-    # Upload test results even on failure
-    - name: Upload Test Results on Failure
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-results-on-failure
         path: |
           reports/
           logs/
