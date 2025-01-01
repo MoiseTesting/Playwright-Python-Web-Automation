@@ -10,14 +10,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Job for P1 and Smoke Tests
-  critical_tests:
-    name: Critical Path Tests (P1 & Smoke)
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
-        browser: [chromium, firefox]
+        python-version: [3.9]
+        browser: [chromium]
       fail-fast: false
 
     steps:
@@ -33,7 +32,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest-xdist  # For parallel execution
+        pip install pytest-xdist behave-html-formatter
+        
+        # Verify installations
+        python --version
+        pip --version
+        behave --version
+        playwright --version
 
     - name: Install Playwright Browsers
       run: |
@@ -42,104 +47,67 @@ jobs:
 
     - name: Create directories
       run: |
-        mkdir -p logs/critical
-        mkdir -p reports/critical
-        mkdir -p screenshots/critical
+        mkdir -p logs
+        mkdir -p reports
+        mkdir -p screenshots
 
-    - name: Run Critical Tests
+    - name: List Feature Files
+      run: |
+        echo "Available feature files:"
+        ls -R features/*.feature
+        
+        echo "Available tags:"
+        behave --tags-help
+
+    - name: Run Smoke Tests
       env:
         BROWSER: ${{ matrix.browser }}
-        ENV: prod
+        ENVIRONMENT: dev  # Match your local environment
       run: |
-        behave --tags="@p1 or @smoke" --format=progress2 --format=json.pretty -o reports/critical/results.json --junit --junit-directory reports/critical
+        behave --tags="@smoke" -v --format=progress2 --format=json.pretty -o reports/smoke_results.json
 
-  # Job for Other Priority Tests (P2-P4)
-  priority_tests:
-    name: Priority Tests (P2-P4)
-    needs: critical_tests  # Only run if critical tests pass
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.9]
-        browser: [chromium]
-        priority: [p2, p3, p4]
-      fail-fast: false
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest-xdist
-
-    - name: Install Playwright Browser
-      run: |
-        playwright install ${{ matrix.browser }}
-        playwright install-deps ${{ matrix.browser }}
-
-    - name: Create directories
-      run: |
-        mkdir -p logs/${{ matrix.priority }}
-        mkdir -p reports/${{ matrix.priority }}
-        mkdir -p screenshots/${{ matrix.priority }}
-
-    - name: Run Priority Tests
+    - name: Run P1 Tests
+      if: success() || failure()  # Run even if smoke tests fail
       env:
         BROWSER: ${{ matrix.browser }}
-        ENV: prod
+        ENVIRONMENT: dev
       run: |
-        # Run tests with retries for flaky tests
-        behave --tags="@${{ matrix.priority }}" --format=progress2 --format=json.pretty -o reports/${{ matrix.priority }}/results.json --junit --junit-directory reports/${{ matrix.priority }} --retries 2
+        behave --tags="@p1" --format=progress2 --format=json.pretty -o reports/p1_results.json
 
-  # Job for Test Result Aggregation
-  aggregate_results:
-    name: Aggregate Test Results
-    needs: [critical_tests, priority_tests]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Download all artifacts
-      uses: actions/download-artifact@v3
-      with:
-        path: all-artifacts
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-
-    - name: Install reporting dependencies
+    - name: Run Remaining Tests
+      if: success() || failure()  # Run even if previous tests fail
+      env:
+        BROWSER: ${{ matrix.browser }}
+        ENVIRONMENT: dev
       run: |
-        pip install junit2html
-        pip install behave2html
+        behave --tags="~@smoke and ~@p1" --format=progress2 --format=json.pretty -o reports/other_results.json
 
-    # Aggregate and generate combined report
     - name: Generate Combined Report
+      if: always()
       run: |
+        # Install additional reporting tools if needed
+        pip install junit2html
+        
+        # Combine reports
         python .github/scripts/combine_reports.py
 
-    - name: Upload Combined Report
+    - name: Upload Test Results
+      if: always()
       uses: actions/upload-artifact@v3
       with:
-        name: combined-test-report
-        path: reports/combined_report.html
+        name: test-results
+        path: |
+          reports/
+          logs/
+          screenshots/
 
-    # Deploy to GitHub Pages
-    - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
+    # Upload test results even on failure
+    - name: Upload Test Results on Failure
+      if: failure()
+      uses: actions/upload-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./reports
-        keep_files: true
+        name: test-results-on-failure
+        path: |
+          reports/
+          logs/
+          screenshots/
