@@ -118,7 +118,13 @@ jobs:
         DISPLAY: ":99.0"
       run: |
         behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json.pretty -o reports/other_results.json
-
+    
+    - name: Create empty result files if they don't exist
+      run: |
+        echo '{}' > reports/smoke_results.json
+        echo '{}' > reports/p1_results.json
+        echo '{}' > reports/other_results.json    
+        
     - name: Generate Combined Report
       if: always()
       run: |
@@ -126,9 +132,9 @@ jobs:
         pip install junit2html
         
         # Create empty result files if they don't exist
-        touch reports/smoke_results.json
-        touch reports/p1_results.json
-        touch reports/other_results.json
+        echo '{}' > reports/smoke_results.json
+        echo '{}' > reports/p1_results.json
+        echo '{}' > reports/other_results.json
         
         # Run report generation
         python .github/scripts/combine_reports.py

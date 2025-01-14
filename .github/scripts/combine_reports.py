@@ -192,24 +192,21 @@ def generate_html_report(data):
     </html>
     """
     
-    # Generate test result rows
-    if not data["test_results"]:
-        test_rows = "<tr><td colspan='5'>No test results found</td></tr>"
-    else:
-        test_rows = ""
-        for result in data["test_results"]:
-            status_class = f"status-{result['status'].lower()}"
-            test_rows += f"""
-                <tr class="{status_class}">
-                    <td>{result["feature"]}</td>
-                    <td>{result["scenario"]}</td>
-                    <td>{result["status"]}</td>
-                    <td>{', '.join(result["tags"])}</td>
-                    <td>{result["duration"]:.2f}</td>
-                </tr>
-            """
+    # Ensure test_rows has a fallback
+    test_rows = "<tr><td colspan='5'>No test results found</td></tr>" if not data["test_results"] else ""
 
-    # Generate the complete HTML report
+    for result in data["test_results"]:
+        status_class = f"status-{result['status'].lower()}"
+        test_rows += f"""
+            <tr class="{status_class}">
+                <td>{result["feature"]}</td>
+                <td>{result["scenario"]}</td>
+                <td>{result["status"]}</td>
+                <td>{', '.join(result["tags"])}</td>
+                <td>{result["duration"]:.2f}</td>
+            </tr>
+        """
+
     return html_content.format(
         total=data["total_scenarios"],
         passed=data["passed_scenarios"],
@@ -218,6 +215,7 @@ def generate_html_report(data):
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         test_rows=test_rows
     )
+
 
 def main():
     try:
