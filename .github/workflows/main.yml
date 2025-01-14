@@ -77,6 +77,11 @@ jobs:
           libdrm2 \
           libxshmfence1
 
+          
+    - name: Update package lists
+      run: sudo apt-get update
+
+
     - name: Install Playwright browsers
       run: |
         python -m playwright install --with-deps ${{ matrix.browser }}
