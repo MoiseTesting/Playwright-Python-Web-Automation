@@ -1,5 +1,3 @@
-# .github/scripts/combine_reports.py
-
 import json
 import os
 from datetime import datetime
