@@ -5,6 +5,25 @@ import os
 from datetime import datetime
 import glob
 
+def read_json_file(json_file):
+    """
+    Safely read and parse a JSON file
+    """
+    try:
+        with open(json_file, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if not content:
+                print(f"Empty file: {json_file}")
+                return None
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError as e:
+                print(f"Invalid JSON in file {json_file}: {e}")
+                return None
+    except Exception as e:
+        print(f"Error reading file {json_file}: {e}")
+        return None
+
 def combine_json_reports():
     """
     Combines all JSON reports from different test runs into a single report
@@ -23,66 +42,74 @@ def combine_json_reports():
     json_files = glob.glob('reports/*results.json')
     print(f"Found JSON files: {json_files}")
 
+    if not json_files:
+        print("No JSON result files found!")
+        return combined_data
+
     for json_file in json_files:
+        data = read_json_file(json_file)
+        if not data:
+            continue
+
+        print(f"Processing file: {json_file}")
         try:
-            with open(json_file, 'r') as f:
-                content = f.read().strip()
-                if not content:
-                    print(f"Empty file: {json_file}")
+            # Handle different JSON structures
+            if isinstance(data, dict):
+                # Extract timing information if available
+                for time_field in ['start_time', 'end_time']:
+                    if time_field in data and isinstance(data[time_field], str):
+                        try:
+                            time_value = datetime.fromisoformat(data[time_field])
+                            if (time_field == 'start_time' and 
+                                (not combined_data[time_field] or 
+                                 time_value.isoformat() < combined_data[time_field])):
+                                combined_data[time_field] = time_value.isoformat()
+                            elif (time_field == 'end_time' and 
+                                  (not combined_data[time_field] or 
+                                   time_value.isoformat() > combined_data[time_field])):
+                                combined_data[time_field] = time_value.isoformat()
+                        except (ValueError, TypeError) as e:
+                            print(f"Error parsing {time_field} in {json_file}: {e}")
+
+                # Process test results
+                features = data.get('features', [])
+                if not isinstance(features, list):
+                    print(f"Warning: 'features' in {json_file} is not a list")
                     continue
-                    
-                data = json.loads(content)
-                print(f"Successfully loaded {json_file}")
-                
-                # Handle different JSON structures
-                if isinstance(data, dict):
-                    # Extract timing information if available
-                    if 'start_time' in data and isinstance(data['start_time'], str):
-                        try:
-                            start_time = datetime.fromisoformat(data['start_time'])
-                            if not combined_data["start_time"] or start_time.isoformat() < combined_data["start_time"]:
-                                combined_data["start_time"] = start_time.isoformat()
-                        except (ValueError, TypeError) as e:
-                            print(f"Error parsing start_time in {json_file}: {e}")
 
-                    if 'end_time' in data and isinstance(data['end_time'], str):
-                        try:
-                            end_time = datetime.fromisoformat(data['end_time'])
-                            if not combined_data["end_time"] or end_time.isoformat() > combined_data["end_time"]:
-                                combined_data["end_time"] = end_time.isoformat()
-                        except (ValueError, TypeError) as e:
-                            print(f"Error parsing end_time in {json_file}: {e}")
+                for feature in features:
+                    if not isinstance(feature, dict):
+                        continue
 
-                    # Process test results
-                    features = data.get('features', [])
-                    if isinstance(features, list):
-                        for feature in features:
-                            if isinstance(feature, dict):
-                                scenarios = feature.get('scenarios', [])
-                                if isinstance(scenarios, list):
-                                    for scenario in scenarios:
-                                        if isinstance(scenario, dict):
-                                            combined_data["total_scenarios"] += 1
-                                            status = scenario.get('status', 'unknown')
-                                            
-                                            if status == "passed":
-                                                combined_data["passed_scenarios"] += 1
-                                            elif status == "failed":
-                                                combined_data["failed_scenarios"] += 1
-                                            else:
-                                                combined_data["skipped_scenarios"] += 1
-                                            
-                                            result = {
-                                                "feature": feature.get('name', 'Unknown Feature'),
-                                                "scenario": scenario.get('name', 'Unknown Scenario'),
-                                                "status": status,
-                                                "tags": scenario.get('tags', []),
-                                                "duration": scenario.get('duration', 0)
-                                            }
-                                            combined_data["test_results"].append(result)
-                
+                    scenarios = feature.get('scenarios', [])
+                    if not isinstance(scenarios, list):
+                        continue
+
+                    for scenario in scenarios:
+                        if not isinstance(scenario, dict):
+                            continue
+
+                        combined_data["total_scenarios"] += 1
+                        status = scenario.get('status', 'unknown')
+                        
+                        if status == "passed":
+                            combined_data["passed_scenarios"] += 1
+                        elif status == "failed":
+                            combined_data["failed_scenarios"] += 1
+                        else:
+                            combined_data["skipped_scenarios"] += 1
+                        
+                        result = {
+                            "feature": feature.get('name', 'Unknown Feature'),
+                            "scenario": scenario.get('name', 'Unknown Scenario'),
+                            "status": status,
+                            "tags": scenario.get('tags', []),
+                            "duration": float(scenario.get('duration', 0))
+                        }
+                        combined_data["test_results"].append(result)
+            
         except Exception as e:
-            print(f"Error processing file {json_file}: {e}")
+            print(f"Error processing data in {json_file}: {e}")
             continue
 
     return combined_data
@@ -91,6 +118,23 @@ def generate_html_report(data):
     """
     Generates an HTML report from the combined test data
     """
+    # Generate test result rows with empty check
+    if not data["test_results"]:
+        test_rows = "<tr><td colspan='5' style='text-align: center;'>No test results found</td></tr>"
+    else:
+        test_rows = ""
+        for result in data["test_results"]:
+            status_class = f"status-{result['status'].lower()}"
+            test_rows += f"""
+                <tr class="{status_class}">
+                    <td>{result["feature"]}</td>
+                    <td>{result["scenario"]}</td>
+                    <td>{result["status"]}</td>
+                    <td>{', '.join(result["tags"])}</td>
+                    <td>{result["duration"]:.2f}</td>
+                </tr>
+            """
+
     html_content = """
     <!DOCTYPE html>
     <html>
@@ -165,21 +209,6 @@ def generate_html_report(data):
     </html>
     """
     
-    # Generate test result rows
-    test_rows = ""
-    for result in data["test_results"]:
-        status_class = f"status-{result['status'].lower()}"
-        test_rows += f"""
-            <tr class="{status_class}">
-                <td>{result["feature"]}</td>
-                <td>{result["scenario"]}</td>
-                <td>{result["status"]}</td>
-                <td>{', '.join(result["tags"])}</td>
-                <td>{result["duration"]:.2f}</td>
-            </tr>
-        """
-    
-    # Generate the complete HTML report
     return html_content.format(
         total=data["total_scenarios"],
         passed=data["passed_scenarios"],
@@ -191,15 +220,18 @@ def generate_html_report(data):
 
 def main():
     try:
+        print("Starting report generation...")
+        
         # Create reports directory if it doesn't exist
         os.makedirs('reports', exist_ok=True)
         
-        print("Starting report generation...")
-        
         # Combine JSON reports
         combined_data = combine_json_reports()
-        
-        print(f"Combined data: {json.dumps(combined_data, indent=2)}")
+        print(f"Combined data summary:")
+        print(f"Total scenarios: {combined_data['total_scenarios']}")
+        print(f"Passed: {combined_data['passed_scenarios']}")
+        print(f"Failed: {combined_data['failed_scenarios']}")
+        print(f"Skipped: {combined_data['skipped_scenarios']}")
         
         # Generate HTML report
         html_content = generate_html_report(combined_data)
