@@ -1,3 +1,5 @@
+# .github/scripts/combine_reports.py
+
 import json
 import os
 from datetime import datetime
@@ -19,7 +21,8 @@ def combine_json_reports():
 
     # Find all JSON result files
     json_files = glob.glob('reports/*results.json')
-    
+    print(f"Found JSON files: {json_files}")
+
     for json_file in json_files:
         try:
             with open(json_file, 'r') as f:
@@ -29,6 +32,7 @@ def combine_json_reports():
                     continue
                     
                 data = json.loads(content)
+                print(f"Successfully loaded {json_file}")
                 
                 # Handle different JSON structures
                 if isinstance(data, dict):
@@ -87,48 +91,76 @@ def generate_html_report(data):
     """
     Generates an HTML report from the combined test data
     """
-    html_template = """
+    html_content = """
     <!DOCTYPE html>
     <html>
     <head>
         <title>Combined Test Report</title>
         <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .summary { background-color: #f5f5f5; padding: 20px; margin-bottom: 20px; }
-            .passed { color: green; }
-            .failed { color: red; }
-            .skipped { color: orange; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-            .status-passed { background-color: #dff0d8; }
-            .status-failed { background-color: #f2dede; }
-            .status-skipped { background-color: #fcf8e3; }
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                background-color: #f5f5f5;
+            }
+            .summary {
+                background-color: white;
+                padding: 20px;
+                margin-bottom: 20px;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .passed { color: #28a745; }
+            .failed { color: #dc3545; }
+            .skipped { color: #ffc107; }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                background-color: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            th, td {
+                border: 1px solid #dee2e6;
+                padding: 12px;
+                text-align: left;
+            }
+            th {
+                background-color: #f8f9fa;
+            }
+            tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+            .status-passed { background-color: #d4edda; }
+            .status-failed { background-color: #f8d7da; }
+            .status-skipped { background-color: #fff3cd; }
+            h1, h2 {
+                color: #333;
+            }
         </style>
     </head>
     <body>
-        <h1>Combined Test Report</h1>
         <div class="summary">
-            <h2>Summary</h2>
-            <p>Total Scenarios: {total}</p>
-            <p class="passed">Passed: {passed}</p>
-            <p class="failed">Failed: {failed}</p>
-            <p class="skipped">Skipped: {skipped}</p>
-            <p>Report Generated: {timestamp}</p>
+            <h1>Test Execution Report</h1>
+            <p><strong>Total Scenarios:</strong> {total}</p>
+            <p class="passed"><strong>Passed:</strong> {passed}</p>
+            <p class="failed"><strong>Failed:</strong> {failed}</p>
+            <p class="skipped"><strong>Skipped:</strong> {skipped}</p>
+            <p><strong>Report Generated:</strong> {timestamp}</p>
         </div>
         
-        <h2>Test Results</h2>
-        <table>
-            <tr>
-                <th>Feature</th>
-                <th>Scenario</th>
-                <th>Status</th>
-                <th>Tags</th>
-                <th>Duration (s)</th>
-            </tr>
-            {test_rows}
-        </table>
+        <div class="results">
+            <h2>Test Results</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Scenario</th>
+                    <th>Status</th>
+                    <th>Tags</th>
+                    <th>Duration (s)</th>
+                </tr>
+                {test_rows}
+            </table>
+        </div>
     </body>
     </html>
     """
@@ -148,7 +180,7 @@ def generate_html_report(data):
         """
     
     # Generate the complete HTML report
-    html_content = html_template.format(
+    return html_content.format(
         total=data["total_scenarios"],
         passed=data["passed_scenarios"],
         failed=data["failed_scenarios"],
@@ -156,24 +188,32 @@ def generate_html_report(data):
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         test_rows=test_rows
     )
-    
-    return html_content
 
 def main():
-    # Create reports directory if it doesn't exist
-    os.makedirs('reports', exist_ok=True)
-    
-    # Combine JSON reports
-    combined_data = combine_json_reports()
-    
-    # Generate HTML report
-    html_content = generate_html_report(combined_data)
-    
-    # Write the combined report
-    with open('reports/combined_report.html', 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    print("Combined report generated successfully!")
+    try:
+        # Create reports directory if it doesn't exist
+        os.makedirs('reports', exist_ok=True)
+        
+        print("Starting report generation...")
+        
+        # Combine JSON reports
+        combined_data = combine_json_reports()
+        
+        print(f"Combined data: {json.dumps(combined_data, indent=2)}")
+        
+        # Generate HTML report
+        html_content = generate_html_report(combined_data)
+        
+        # Write the combined report
+        report_path = 'reports/combined_report.html'
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        print(f"Report successfully generated at: {report_path}")
+        
+    except Exception as e:
+        print(f"Error in main: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     main()
