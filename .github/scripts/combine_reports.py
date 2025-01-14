@@ -118,23 +118,6 @@ def generate_html_report(data):
     """
     Generates an HTML report from the combined test data
     """
-    # Generate test result rows with empty check
-    if not data["test_results"]:
-        test_rows = "<tr><td colspan='5' style='text-align: center;'>No test results found</td></tr>"
-    else:
-        test_rows = ""
-        for result in data["test_results"]:
-            status_class = f"status-{result['status'].lower()}"
-            test_rows += f"""
-                <tr class="{status_class}">
-                    <td>{result["feature"]}</td>
-                    <td>{result["scenario"]}</td>
-                    <td>{result["status"]}</td>
-                    <td>{', '.join(result["tags"])}</td>
-                    <td>{result["duration"]:.2f}</td>
-                </tr>
-            """
-
     html_content = """
     <!DOCTYPE html>
     <html>
@@ -209,6 +192,24 @@ def generate_html_report(data):
     </html>
     """
     
+    # Generate test result rows
+    if not data["test_results"]:
+        test_rows = "<tr><td colspan='5'>No test results found</td></tr>"
+    else:
+        test_rows = ""
+        for result in data["test_results"]:
+            status_class = f"status-{result['status'].lower()}"
+            test_rows += f"""
+                <tr class="{status_class}">
+                    <td>{result["feature"]}</td>
+                    <td>{result["scenario"]}</td>
+                    <td>{result["status"]}</td>
+                    <td>{', '.join(result["tags"])}</td>
+                    <td>{result["duration"]:.2f}</td>
+                </tr>
+            """
+
+    # Generate the complete HTML report
     return html_content.format(
         total=data["total_scenarios"],
         passed=data["passed_scenarios"],
