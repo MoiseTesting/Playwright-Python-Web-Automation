@@ -97,7 +97,7 @@ jobs:
         sleep 3
         
         # Run tests with proper headless configuration
-        behave --tags="@smoke" -v --format=progress2 --format=json.pretty -o reports/smoke_results.json
+         behave --tags="@smoke" -v --format=progress2 --format=json -o reports/smoke_results.json
         # Debug: Print contents of the smoke report
         cat reports/smoke_results.json
       
@@ -109,7 +109,7 @@ jobs:
         PWTEST_HEADED: "0"
         DISPLAY: ":99.0"
       run: |
-        behave --tags="@p1" -v --format=progress2 --format=json.pretty -o reports/p1_results.json
+        behave --tags="@p1" -v --format=progress2 --format=json -o reports/p1_results.json
         # Debug: Print contents of the P1 report
         cat reports/p1_results.json
 
@@ -121,7 +121,7 @@ jobs:
         PWTEST_HEADED: "0"
         DISPLAY: ":99.0"
       run: |
-        behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json.pretty -o reports/other_results.json
+        behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json -o reports/other_results.json
          # Debug: Print contents of the other tests report
         cat reports/other_results.json
     
