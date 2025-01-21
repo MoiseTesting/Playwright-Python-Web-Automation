@@ -45,3 +45,4 @@ screenshots/*
 # Log files
 *.log
 logs/
+reports/combined_report.html

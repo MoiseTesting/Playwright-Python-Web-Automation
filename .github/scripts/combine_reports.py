@@ -124,45 +124,45 @@ def generate_html_report(data):
     <head>
         <title>Combined Test Report</title>
         <style>
-            body {
+            body {{
                 font-family: Arial, sans-serif;
                 margin: 20px;
                 background-color: #f5f5f5;
-            }
-            .summary {
+            }}
+            .summary {{
                 background-color: white;
                 padding: 20px;
                 margin-bottom: 20px;
                 border-radius: 5px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .passed { color: #28a745; }
-            .failed { color: #dc3545; }
-            .skipped { color: #ffc107; }
-            table {
+            }}
+            .passed {{ color: #28a745; }}
+            .failed {{ color: #dc3545; }}
+            .skipped {{ color: #ffc107; }}
+            table {{
                 width: 100%;
                 border-collapse: collapse;
                 margin-top: 20px;
                 background-color: white;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            th, td {
+            }}
+            th, td {{
                 border: 1px solid #dee2e6;
                 padding: 12px;
                 text-align: left;
-            }
-            th {
+            }}
+            th {{
                 background-color: #f8f9fa;
-            }
-            tr:nth-child(even) {
+            }}
+            tr:nth-child(even) {{
                 background-color: #f8f9fa;
-            }
-            .status-passed { background-color: #d4edda; }
-            .status-failed { background-color: #f8d7da; }
-            .status-skipped { background-color: #fff3cd; }
-            h1, h2 {
+            }}
+            .status-passed {{ background-color: #d4edda; }}
+            .status-failed {{ background-color: #f8d7da; }}
+            .status-skipped {{ background-color: #fff3cd; }}
+            h1, h2 {{
                 color: #333;
-            }
+            }}
         </style>
     </head>
     <body>
