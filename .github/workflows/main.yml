@@ -84,6 +84,9 @@ jobs:
         mkdir -p logs
         mkdir -p reports
         mkdir -p screenshots
+
+    - name: Upgrade Behave
+      run: pip install --upgrade behave    
     - name: Check Behave Version
       run: behave --version    
 
