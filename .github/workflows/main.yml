@@ -1,3 +1,5 @@
+# .github/workflows/main.yml
+
 name: Playwright Test Automation
 
 on:
@@ -85,40 +87,20 @@ jobs:
         mkdir -p reports
         mkdir -p screenshots
 
-    - name: Upgrade Behave
-      run: pip install --upgrade behave    
-    - name: Check Behave Version
-      run: behave --version    
-
     - name: Run Smoke Tests
       env:
         BROWSER: ${{ matrix.browser }}
         ENVIRONMENT: dev
-        PWTEST_HEADED: "0"
+        PWTEST_HEADED: "0"  # Force headless mode
         DISPLAY: ":99.0"
       run: |
-        # Ensure reports directory exists
-        mkdir -p reports
-
-        # Run tests with multiple formats
-        behave --tags="@smoke" -v --format=pretty --format=json -o reports/smoke_results.json
-
-        # Check the JSON file
-        echo "Smoke Results JSON File Size:"
-        ls -lh reports/smoke_results.json
-
-        echo "Contents of smoke_results.json:"
-        cat reports/smoke_results.json
-
-        # Fail if JSON is empty
-        if [ ! -s reports/smoke_results.json ]; then
-          echo "Smoke results JSON file is empty!"
-          exit 1
-        fi
-
-    - name: Output Smoke Results JSON
-      run: cat reports/smoke_results.json   
-
+        # Start virtual display
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 3
+        
+        # Run tests with proper headless configuration
+        behave --tags="@smoke" -v --format=progress2 --format=json.pretty -o reports/smoke_results.json
+      
     - name: Run P1 Tests
       if: success() || failure()
       env:
@@ -127,9 +109,7 @@ jobs:
         PWTEST_HEADED: "0"
         DISPLAY: ":99.0"
       run: |
-        behave --tags="@p1" -v --format=progress2 --format=json -o reports/p1_results.json
-        # Debug: Print contents of the P1 report
-        cat reports/p1_results.json
+        behave --tags="@p1" -v --format=progress2 --format=json.pretty -o reports/p1_results.json
 
     - name: Run Remaining Tests
       if: success() || failure()
@@ -139,19 +119,8 @@ jobs:
         PWTEST_HEADED: "0"
         DISPLAY: ":99.0"
       run: |
-        behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json -o reports/other_results.json
-         # Debug: Print contents of the other tests report
-        cat reports/other_results.json
+        behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json.pretty -o reports/other_results.json
 
-    - name: Check Reports Directory
-      run: ls -l reports/
-    
-    - name: Create empty result files if they don't exist
-      run: |
-        echo '{}' > reports/smoke_results.json
-        echo '{}' > reports/p1_results.json
-        echo '{}' > reports/other_results.json    
-        
     - name: Generate Combined Report
       if: always()
       run: |
@@ -159,9 +128,9 @@ jobs:
         pip install junit2html
         
         # Create empty result files if they don't exist
-        echo '{}' > reports/smoke_results.json
-        echo '{}' > reports/p1_results.json
-        echo '{}' > reports/other_results.json
+        touch reports/smoke_results.json
+        touch reports/p1_results.json
+        touch reports/other_results.json
         
         # Run report generation
         python .github/scripts/combine_reports.py
