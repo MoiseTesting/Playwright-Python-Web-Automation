@@ -98,6 +98,8 @@ jobs:
         
         # Run tests with proper headless configuration
         behave --tags="@smoke" -v --format=progress2 --format=json.pretty -o reports/smoke_results.json
+        # Debug: Print contents of the smoke report
+        cat reports/smoke_results.json
       
     - name: Run P1 Tests
       if: success() || failure()
@@ -108,6 +110,8 @@ jobs:
         DISPLAY: ":99.0"
       run: |
         behave --tags="@p1" -v --format=progress2 --format=json.pretty -o reports/p1_results.json
+        # Debug: Print contents of the P1 report
+        cat reports/p1_results.json
 
     - name: Run Remaining Tests
       if: success() || failure()
@@ -118,6 +122,8 @@ jobs:
         DISPLAY: ":99.0"
       run: |
         behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json.pretty -o reports/other_results.json
+         # Debug: Print contents of the other tests report
+        cat reports/other_results.json
     
     - name: Create empty result files if they don't exist
       run: |
