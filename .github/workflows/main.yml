@@ -84,6 +84,8 @@ jobs:
         mkdir -p logs
         mkdir -p reports
         mkdir -p screenshots
+    - name: Check Behave Version
+      run: behave --version    
 
     - name: Run Smoke Tests
       env:
