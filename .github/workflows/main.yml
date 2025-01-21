@@ -94,27 +94,23 @@ jobs:
       env:
         BROWSER: ${{ matrix.browser }}
         ENVIRONMENT: dev
-        PWTEST_HEADED: "0"  # Force headless mode
+        PWTEST_HEADED: "0"
         DISPLAY: ":99.0"
       run: |
-        # Start virtual display
-        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-        sleep 3
-        
-        # Run tests with proper headless configuration
-        behave --tags="@smoke" -v --format=progress2 --format=json -o reports/smoke_results.json
-                # Run tests without filtering tags to debug
-        #behave -v --format=progress2 --format=json -o reports/smoke_results.json
-        
-        # Debug: Print JSON file size
+        # Ensure reports directory exists
+        mkdir -p reports
+
+        # Run tests with multiple formats
+        behave --tags="@smoke" -v --format=pretty --format=json -o reports/smoke_results.json
+
+        # Check the JSON file
         echo "Smoke Results JSON File Size:"
         ls -lh reports/smoke_results.json
-        
-        # Debug: Check JSON file content
+
         echo "Contents of smoke_results.json:"
         cat reports/smoke_results.json
 
-        # Exit if JSON file is empty
+        # Fail if JSON is empty
         if [ ! -s reports/smoke_results.json ]; then
           echo "Smoke results JSON file is empty!"
           exit 1
