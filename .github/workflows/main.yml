@@ -102,25 +102,27 @@ jobs:
         sleep 3
         
         # Run tests with proper headless configuration
-         behave --tags="@smoke" -v --format=progress2 --format=json -o reports/smoke_results.json
-        # Debug: Print contents of the smoke report
-        cat reports/smoke_results.json
-         # Verify JSON file existence
-        if [ ! -f reports/smoke_results.json ]; then
-          echo "Smoke results JSON file not found!"
-          exit 1
-        fi
+        behave --tags="@smoke" -v --format=progress2 --format=json -o reports/smoke_results.json
+                # Run tests without filtering tags to debug
+        #behave -v --format=progress2 --format=json -o reports/smoke_results.json
         
-        # Check if the JSON file has content
+        # Debug: Print JSON file size
+        echo "Smoke Results JSON File Size:"
+        ls -lh reports/smoke_results.json
+        
+        # Debug: Check JSON file content
+        echo "Contents of smoke_results.json:"
+        cat reports/smoke_results.json
+
+        # Exit if JSON file is empty
         if [ ! -s reports/smoke_results.json ]; then
           echo "Smoke results JSON file is empty!"
           exit 1
         fi
 
-        # Print the JSON file for debugging
-        echo "Contents of smoke_results.json:"
-        cat reports/smoke_results.json
-      
+    - name: Output Smoke Results JSON
+      run: cat reports/smoke_results.json   
+
     - name: Run P1 Tests
       if: success() || failure()
       env:
