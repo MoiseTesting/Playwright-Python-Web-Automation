@@ -105,6 +105,21 @@ jobs:
          behave --tags="@smoke" -v --format=progress2 --format=json -o reports/smoke_results.json
         # Debug: Print contents of the smoke report
         cat reports/smoke_results.json
+         # Verify JSON file existence
+        if [ ! -f reports/smoke_results.json ]; then
+          echo "Smoke results JSON file not found!"
+          exit 1
+        fi
+        
+        # Check if the JSON file has content
+        if [ ! -s reports/smoke_results.json ]; then
+          echo "Smoke results JSON file is empty!"
+          exit 1
+        fi
+
+        # Print the JSON file for debugging
+        echo "Contents of smoke_results.json:"
+        cat reports/smoke_results.json
       
     - name: Run P1 Tests
       if: success() || failure()
@@ -129,6 +144,9 @@ jobs:
         behave --tags="~@smoke and ~@p1" -v --format=progress2 --format=json -o reports/other_results.json
          # Debug: Print contents of the other tests report
         cat reports/other_results.json
+
+    - name: Check Reports Directory
+      run: ls -l reports/
     
     - name: Create empty result files if they don't exist
       run: |
